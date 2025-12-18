@@ -47,7 +47,29 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
       }
     });
 
-    return response.data.results;
+    return {
+      content: response.data.results.map( result => {
+        return {
+          type: "resource",
+          resource: {
+            doi: result.doi,
+            title: result.title,
+            authors: result.stringAuthors,
+            pubdate: result.pubdate,
+            articleID: result.articleID,
+            landingDoi: result.landingDoi,
+            articleType: result.articleType,
+            journal: result.journal,
+            citation: result.citation,
+            isFree: result.isFree,
+            thumbnail: result.thumbnail,
+            text: result.text,
+            mediaType: result.mediaType,
+            mediaTitle: result.mediaTitle,
+          }
+        }
+      })
+    }
   } catch (error) {
     console.error("Error executing simple query:", error);
     // throw new Error("Failed to execute simple query");
