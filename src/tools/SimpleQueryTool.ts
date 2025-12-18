@@ -1,6 +1,6 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
-import { axios } from "axios";
+import axios from "axios";
 
 interface SimpleQueryInput {
   context: string;
@@ -24,26 +24,35 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
   };
 
   async execute(input: SimpleQueryInput) {
-    let baseURL = process.env.APIHOST+'/api/v1/simple';
+    const { APIHOST, APIKEY, APIUSER } = process.env;
+
+    if (!APIHOST || !APIKEY || !APIUSER) {
+      throw new Error("Missing required environment variables");
+    }
+
+    let baseURL = APIHOST+'/api/v1/simple';
     const params = {
       context: input.context,
       query: input.query
     };
     try {
-    const results = await axios.get(baseURL,{
+    const response = await axios.get(baseURL,{
       params: params,
       headers: {
          'Content-Type': 'application/json',
-         'Accept': 'application/json',
-         'x-nejmgroup-correlation-id': req.correlationId,                
-         'apikey': process.env.APIKEY,
-         'apiuser': process.env.APIUSER
+         'Accept': 'application/json',         
+         'apikey': APIKEY,
+         'apiuser': APIUSER
       }
     });
+
+    return response.data.results;
   } catch (error) {
     console.error("Error executing simple query:", error);
     // throw new Error("Failed to execute simple query");
   }
 }
+}
 
-export default SimpleQueryTool;
+export { SimpleQueryTool };
+

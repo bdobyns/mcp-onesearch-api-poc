@@ -1,5 +1,6 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
+import axios from "axios";
 
 interface BrowseArticleTypeInput {
   context: string
@@ -59,27 +60,36 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
 
   };
 
-  async execute(input: SimpleQueryInput) {
-    let baseURL = process.env.APIHOST+'/api/v1/simple';
+  async execute(input: BrowseArticleTypeInput) {
+    const { APIHOST, APIKEY, APIUSER } = process.env;
+
+    if (!APIHOST || !APIKEY || !APIUSER) {
+      throw new Error("Missing required environment variables");
+    }
+   
+    let baseURL = APIHOST+'/api/v1/simple';
     const params = {
       context: input.context,
       articleType: input.articleType,
       sortBy: "pubdate-descending",
     };
     try {
-    const results = await axios.get(baseURL, {
+    const response = await axios.get(baseURL, {
       params: params,
       headers: {
          'Content-Type': 'application/json',
          'Accept': 'application/json',
-         'apikey': process.env.APIKEY,
-         'apiuser': process.env.APIUSER
+         'apikey': APIKEY,
+         'apiuser': APIUSER
       }
     });
+
+    return response.data.results;
   } catch (error) {
     console.error("Error executing articleType browse:", error);
     // throw new Error("Failed to execute articleType browse");
   }
 }
+}
 
-export default BrowseArticleTypeTool;
+export { BrowseArticleTypeTool };
