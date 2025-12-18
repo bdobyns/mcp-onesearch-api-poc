@@ -1,27 +1,19 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 import axios, { AxiosResponse } from "axios";
-import { QueryResult, QueryApiResponse } from "../util/onesearchresponse";
+import { QueryApiResponse, QueryResult } from "../util/onesearchresponse";
 
 /* ------------------------------------------------------------------ */
-/* Schema (single source of truth)                                     */
+/* Input schema using Zod                                             */
 /* ------------------------------------------------------------------ */
-
 const SimpleQuerySchema = {
   context: {
-    type: z.enum([
-      "nejm",
-      "catalyst",
-      "evidence",
-      "clinician",
-      "nejm-ai",
-    ]),
+    type: z.enum(["nejm", "catalyst", "evidence", "clinician", "nejm-ai"]),
     description: "The journal to query against",
   },
-
   query: {
     type: z.string().min(1),
-    description: "Query to execute",
+    description: "The query to execute",
   },
 };
 
@@ -33,74 +25,54 @@ type SimpleQueryInput = {
 /* ------------------------------------------------------------------ */
 /* Tool                                                               */
 /* ------------------------------------------------------------------ */
-
 class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
   name = "simple-query";
-
   description =
     "Perform a simple query against a single journal and return matching articles.";
-
   schema = SimpleQuerySchema;
 
   async execute(input: SimpleQueryInput) {
     const { APIHOST, APIKEY, APIUSER } = process.env;
 
     if (!APIHOST || !APIKEY || !APIUSER) {
-      throw new Error("Missing required environment variables");
+      throw new Error(
+        "Missing required environment variables: APIHOST, APIKEY, APIUSER"
+      );
     }
 
     const url = `${APIHOST}/api/v1/simple`;
 
     try {
-      const response: AxiosResponse<QueryApiResponse> =
-        await axios.get(url, {
-          params: {
-            context: input.context,
-            query: input.query,
-          },
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            apikey: APIKEY,
-            apiuser: APIUSER,
-          },
-        });
+      const response: AxiosResponse<QueryApiResponse> = await axios.get(url, {
+        params: {
+          context: input.context,
+          query: input.query,
+        },
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          apikey: APIKEY,
+          apiuser: APIUSER,
+        },
+      });
 
+      // MCP-compliant return: content[] with resource_link
       return {
-        content: response.data.results.map((result: QueryResult) => ({
-          type: "resource",
-          resource: {
-            uri: `doi:${result.doi}`,
-            name: result.title,
-            mimeType: "application/json",
-            data: JSON.stringify(
-              {
-                doi: result.doi,
-                pubdate: result.pubdate,
-                articleID: result.articleID,
-                landingDoi: result.landingDoi,
-                articleType: result.articleType,
-                journal: result.journal,
-                citation: result.citation,
-                authors: result.stringAuthors,
-                isFree: result.isFree,
-                thumbnail: result.thumbnail,
-                text: result.text,
-                mediaType: result.mediaType,
-                mediaTitle: result.mediaTitle,
-              },
-              null,
-              2
-            ),
+        content: [
+          {
+            type: "text",
+            text: `Found ${response.data.results.length} articles for "${input.query}"`,
           },
-        })),
+          ...response.data.results.map((result: QueryResult) => ({
+            type: "resource_link",
+            name: result.title,
+            uri: `doi:${result.doi}`,
+          })),
+        ],
       };
     } catch (error) {
-      console.error("Error executing simple query", {
-        input,
-        error,
-      });
-      throw error;
+      console.error("Error executing simple query:", error);
+      throw error; // Let MCP handle the error
     }
   }
 }
