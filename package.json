@@ -1,6 +1,6 @@
 {
   "name": "mcp-onesearch-api-poc",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "mcp-onesearch-api-poc MCP server",
   "type": "module",
   "bin": {
@@ -22,6 +22,6 @@
     "typescript": "^5.3.3"
   },
   "engines": {
-    "node": ">=18.19.0"
+    "node": ">=22.x"
   }
 }

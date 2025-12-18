@@ -1,14 +1,14 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 
-interface BrowsearticletypeInput {
+interface BrowseArticleTypeInput {
   context: string
   articleType: string;
 }
 
-class BrowsearticletypeTool extends MCPTool<BrowsearticletypeInput> {
+class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
   name = "BrowseArticleType";
-  description = "Browsearticletype tool description";
+  description = "BrowseArticleType tool description";
 
   schema = {
     context: {
@@ -63,16 +63,15 @@ class BrowsearticletypeTool extends MCPTool<BrowsearticletypeInput> {
     let baseURL = process.env.APIHOST+'/api/v1/simple';
     const params = {
       context: input.context,
-      articleType: input.articleType
-      sortBy: "pubdate-descending"
+      articleType: input.articleType,
+      sortBy: "pubdate-descending",
     };
     try {
-    const results = await axios.get(baseURL,
+    const results = await axios.get(baseURL, {
       params: params,
       headers: {
          'Content-Type': 'application/json',
          'Accept': 'application/json',
-         'x-nejmgroup-correlation-id': req.correlationId,                
          'apikey': process.env.APIKEY,
          'apiuser': process.env.APIUSER
       }
@@ -83,4 +82,4 @@ class BrowsearticletypeTool extends MCPTool<BrowsearticletypeInput> {
   }
 }
 
-export default BrowsearticletypeTool;
+export default BrowseArticleTypeTool;

@@ -13,7 +13,8 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
 
   schema = {
     context: {
-      type: z.enum(["nejm","catalyst","evidence","clinician","nejm-ai"]);
+      type: z.enum(["nejm","catalyst","evidence","clinician","nejm-ai"]),
+      description: "the journal to query against",
     },
 
     query: {
@@ -29,7 +30,7 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
       query: input.query
     };
     try {
-    const results = await axios.get(baseURL,
+    const results = await axios.get(baseURL,{
       params: params,
       headers: {
          'Content-Type': 'application/json',
