@@ -9,10 +9,10 @@
 
 * add a tool for (truly) simple search using /simple?query=
 * add a tool for different browse scenarios
-** Topic
-** SubTopic
-** ArticleType
-** CME
+  * Topic
+  * SubTopic
+  * ArticleType
+  * CME
 * add a tool for morelikethis
 
 * integrate with moesif for monetization https://www.moesif.com/blog/api-strategy/model-context-protocol/Monetizing-MCP-Model-Context-Protocol-Servers-With-Moesif/
