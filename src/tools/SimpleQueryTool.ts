@@ -3,26 +3,44 @@ import { z } from "zod";
 import axios, { AxiosResponse } from "axios";
 import { QueryResult, QueryApiResponse } from "../util/onesearchresponse";
 
-interface SimpleQueryInput {
-  context: string;
-  query: string;
-}
+/* ------------------------------------------------------------------ */
+/* Schema (single source of truth)                                     */
+/* ------------------------------------------------------------------ */
+
+const SimpleQuerySchema = {
+  context: {
+    type: z.enum([
+      "nejm",
+      "catalyst",
+      "evidence",
+      "clinician",
+      "nejm-ai",
+    ]),
+    description: "The journal to query against",
+  },
+
+  query: {
+    type: z.string().min(1),
+    description: "Query to execute",
+  },
+};
+
+type SimpleQueryInput = {
+  context: z.infer<typeof SimpleQuerySchema.context.type>;
+  query: z.infer<typeof SimpleQuerySchema.query.type>;
+};
+
+/* ------------------------------------------------------------------ */
+/* Tool                                                               */
+/* ------------------------------------------------------------------ */
 
 class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
   name = "simple-query";
-  description = "Perform a simple query against a single journal. The name of the journal is provided in the context. returns an array of results that include information about each result.";
 
-  schema = {
-    context: {
-      type: z.enum(["nejm","catalyst","evidence","clinician","nejm-ai"]),
-      description: "the journal to query against",
-    },
+  description =
+    "Perform a simple query against a single journal and return matching articles.";
 
-    query: {
-      type: z.string(),
-      description: "query to execute",
-    },
-  };
+  schema = SimpleQuerySchema;
 
   async execute(input: SimpleQueryInput) {
     const { APIHOST, APIKEY, APIUSER } = process.env;
@@ -31,51 +49,60 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
       throw new Error("Missing required environment variables");
     }
 
-    let baseURL = APIHOST+'/api/v1/simple';
-    const params = {
-      context: input.context,
-      query: input.query
-    };
-    try {
-    const response: AxiosResponse<QueryApiResponse> = await axios.get(baseURL,{
-      params: params,
-      headers: {
-         'Content-Type': 'application/json',
-         'Accept': 'application/json',         
-         'apikey': APIKEY,
-         'apiuser': APIUSER
-      }
-    });
+    const url = `${APIHOST}/api/v1/simple`;
 
-    return {
-      content: response.data.results.map( result => {
-        return {
+    try {
+      const response: AxiosResponse<QueryApiResponse> =
+        await axios.get(url, {
+          params: {
+            context: input.context,
+            query: input.query,
+          },
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            apikey: APIKEY,
+            apiuser: APIUSER,
+          },
+        });
+
+      return {
+        content: response.data.results.map((result: QueryResult) => ({
           type: "resource",
           resource: {
-            doi: result.doi,
-            title: result.title,
-            authors: result.stringAuthors,
-            pubdate: result.pubdate,
-            articleID: result.articleID,
-            landingDoi: result.landingDoi,
-            articleType: result.articleType,
-            journal: result.journal,
-            citation: result.citation,
-            isFree: result.isFree,
-            thumbnail: result.thumbnail,
-            text: result.text,
-            mediaType: result.mediaType,
-            mediaTitle: result.mediaTitle,
-          }
-        }
-      })
+            uri: `doi:${result.doi}`,
+            name: result.title,
+            mimeType: "application/json",
+            data: JSON.stringify(
+              {
+                doi: result.doi,
+                pubdate: result.pubdate,
+                articleID: result.articleID,
+                landingDoi: result.landingDoi,
+                articleType: result.articleType,
+                journal: result.journal,
+                citation: result.citation,
+                authors: result.stringAuthors,
+                isFree: result.isFree,
+                thumbnail: result.thumbnail,
+                text: result.text,
+                mediaType: result.mediaType,
+                mediaTitle: result.mediaTitle,
+              },
+              null,
+              2
+            ),
+          },
+        })),
+      };
+    } catch (error) {
+      console.error("Error executing simple query", {
+        input,
+        error,
+      });
+      throw error;
     }
-  } catch (error) {
-    console.error("Error executing simple query:", error);
-    // throw new Error("Failed to execute simple query");
   }
-}
 }
 
 export { SimpleQueryTool };
-
