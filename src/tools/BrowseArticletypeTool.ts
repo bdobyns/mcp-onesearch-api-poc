@@ -1,6 +1,7 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
+import { QueryApiResponse } from "../util/onesearchresponse";
 
 interface BrowseArticleTypeInput {
   context: string
@@ -74,7 +75,7 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
       sortBy: "pubdate-descending",
     };
     try {
-    const response = await axios.get(baseURL, {
+    const response: AxiosResponse<QueryApiResponse> = await axios.get(baseURL, {
       params: params,
       headers: {
          'Content-Type': 'application/json',
