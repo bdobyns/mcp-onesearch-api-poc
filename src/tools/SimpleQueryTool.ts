@@ -30,22 +30,26 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
 
     const { APIHOST, APIKEY, APIUSER } = process.env;
     if (!APIHOST || !APIKEY || !APIUSER) {
-      throw new Error(
-        "Missing required environment variables: APIHOST, APIKEY, APIUSER"
-      );
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Missing required environment variables: APIHOST, APIKEY, APIUSER",
+          },
+        ],
+      };
     }
 
-    const url = `${APIHOST}/api/v1/simple`;
+    const url = `https://${APIHOST}/api/v1/simple`;
 
-    let response: AxiosResponse<QueryApiResponse>;
     try {
-      response = await axios.get(url, {
+      const response: AxiosResponse<QueryApiResponse> = await axios.get(url, {
         params: { 
           context: input.context, 
           query: input.query, 
           objectType: `${input.context}-article`,
           showResults: 'full',
-       },
+        },
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
@@ -53,11 +57,35 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
           apiuser: APIUSER,
         },
       });
+
+      const results = response.data.results ?? [];
+
+      // MCP-compliant content array (text only)
+      const content: Array<{ type: string; text: string }> = [];
+
+      // Summary text
+      content.push({
+        type: "text",
+        text: `Found ${results.length} articles for query: "${input.query}"`,
+      });
+
+      // One text item per article
+      results
+        .filter(r => r.title && r.doi)
+        .forEach(r => {
+          content.push({
+            type: "text",
+            text: `Title: ${r.title}\nDOI: ${r.doi.startsWith("doi:") ? r.doi : `doi:${r.doi}`}\nJournal: ${r.journal || "N/A"}\nPublication Date: ${r.pubdate || "N/A"}\n`,
+          });
+        });
+
+      console.log("Returning MCP content:", JSON.stringify({ content }));
+
+      return { content };
     } catch (err) {
       let errorMsg = "Failed to fetch articles. Check server logs.";
       if (axios.isAxiosError(err)) {
         const axiosErr = err as AxiosError;
-        // Use the status code and response body if available
         if (axiosErr.response) {
           errorMsg = `API error ${axiosErr.response.status}: ${JSON.stringify(
             axiosErr.response.data
@@ -69,31 +97,16 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
         errorMsg = err.message;
       }
 
-    const results = response.data.results ?? [];
-
-    // MCP-compliant content array
-    const content: Array<{ type: string; [key: string]: string }> = [];
-
-    // Summary text
-    content.push({
-      type: "text",
-      text: `Found ${results.length} articles for "${input.query}"`,
-    });
-
-    // Resource links (strictly MCP-compliant)
-    results
-      .filter(r => r.title && r.doi)
-      .forEach(r => {
-        content.push({
-          type: "resource_link",
-          name: String(r.title),
-          uri: String(r.doi).startsWith("doi:") ? String(r.doi) : `doi:${r.doi}`,
-        });
-      });
-
-    console.log("Returning MCP content:", JSON.stringify({ content }));
-
-    return { content };
+      // Return the error via MCP content
+      return {
+        content: [
+          {
+            type: "text",
+            text: errorMsg,
+          },
+        ],
+      };
+    }
   }
 }
 
