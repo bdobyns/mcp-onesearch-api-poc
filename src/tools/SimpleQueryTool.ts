@@ -30,6 +30,7 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
 
     const { APIHOST, APIKEY, APIUSER } = process.env;
     if (!APIHOST || !APIKEY || !APIUSER) {
+      console.error("Missing required environment variables:", { APIHOST, APIKEY, APIUSER });
       return {
         content: [
           {
@@ -63,12 +64,6 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
       // MCP-compliant content array (text only)
       const content: Array<{ type: string; text: string }> = [];
 
-      // Summary text
-      content.push({
-        type: "text",
-        text: `Found ${results.length} articles for query: "${input.query}"`,
-      });
-
       // One text item per article
       results
         .filter(r => r.title && r.doi)
@@ -79,10 +74,13 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
           });
         });
 
-      console.log("Returning MCP content:", JSON.stringify({ content }));
+      console.log("results fetched:", results.length);
+
+      // console.log("Returning MCP content:", JSON.stringify({ content }));
 
       return { content };
     } catch (err) {
+      console.error("Error during SimpleQueryTool execution:", err);
       let errorMsg = "Failed to fetch articles. Check server logs.";
       if (axios.isAxiosError(err)) {
         const axiosErr = err as AxiosError;
@@ -99,6 +97,7 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
 
       // Return the error via MCP content
       return {
+        console.error("Error message to return to MCP client:", errorMsg);
         content: [
           {
             type: "text",
