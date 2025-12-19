@@ -1,19 +1,16 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
 import axios, { AxiosResponse } from "axios";
-import { QueryApiResponse, QueryResult } from "../util/onesearchresponse";
+import { QueryApiResponse } from "../util/onesearchresponse";
 
-/* ------------------------------------------------------------------ */
-/* Input schema using Zod                                             */
-/* ------------------------------------------------------------------ */
 const SimpleQuerySchema = {
   context: {
     type: z.enum(["nejm", "catalyst", "evidence", "clinician", "nejm-ai"]),
-    description: "The journal to query against",
+    description: "Journal to query against",
   },
   query: {
     type: z.string().min(1),
-    description: "The query to execute",
+    description: "Query to execute",
   },
 };
 
@@ -22,9 +19,6 @@ type SimpleQueryInput = {
   query: z.infer<typeof SimpleQuerySchema.query.type>;
 };
 
-/* ------------------------------------------------------------------ */
-/* Tool                                                               */
-/* ------------------------------------------------------------------ */
 class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
   name = "simple-query";
   description =
@@ -32,8 +26,9 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
   schema = SimpleQuerySchema;
 
   async execute(input: SimpleQueryInput) {
-    const { APIHOST, APIKEY, APIUSER } = process.env;
+    console.log("SimpleQueryTool.execute called with:", input);
 
+    const { APIHOST, APIKEY, APIUSER } = process.env;
     if (!APIHOST || !APIKEY || !APIUSER) {
       throw new Error(
         "Missing required environment variables: APIHOST, APIKEY, APIUSER"
@@ -42,12 +37,10 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
 
     const url = `${APIHOST}/api/v1/simple`;
 
+    let response: AxiosResponse<QueryApiResponse>;
     try {
-      const response: AxiosResponse<QueryApiResponse> = await axios.get(url, {
-        params: {
-          context: input.context,
-          query: input.query,
-        },
+      response = await axios.get(url, {
+        params: { context: input.context, query: input.query },
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
@@ -55,25 +48,43 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
           apiuser: APIUSER,
         },
       });
-
-      // MCP-compliant return: content[] with resource_link
+    } catch (err) {
+      console.error("Error fetching from API:", err);
       return {
         content: [
           {
-            type: "text",
-            text: `Found ${response.data.results.length} articles for "${input.query}"`,
+            type: "text" as const,
+            text: `Failed to fetch results: ${err}`,
           },
-          ...response.data.results.map((result: QueryResult) => ({
-            type: "resource_link",
-            name: result.title,
-            uri: `doi:${result.doi}`,
-          })),
         ],
       };
-    } catch (error) {
-      console.error("Error executing simple query:", error);
-      throw error; // Let MCP handle the error
     }
+
+    const results = response.data.results ?? [];
+
+    // MCP-compliant content array
+    const content: Array<{ type: string; [key: string]: string }> = [];
+
+    // Summary text
+    content.push({
+      type: "text",
+      text: `Found ${results.length} articles for "${input.query}"`,
+    });
+
+    // Resource links (strictly MCP-compliant)
+    results
+      .filter(r => r.title && r.doi)
+      .forEach(r => {
+        content.push({
+          type: "resource_link",
+          name: String(r.title),
+          uri: String(r.doi).startsWith("doi:") ? String(r.doi) : `doi:${r.doi}`,
+        });
+      });
+
+    console.log("Returning MCP content:", JSON.stringify({ content }));
+
+    return { content };
   }
 }
 
