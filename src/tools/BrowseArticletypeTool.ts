@@ -1,4 +1,4 @@
-import { MCPTool } from "mcp-framework";
+import { MCPTool, logger } from "mcp-framework";
 import { z } from "zod";
 import axios, { AxiosError, AxiosResponse } from "axios";
 import { QueryApiResponse } from "../util/onesearchresponse";
@@ -63,9 +63,11 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
   };
 
   async execute(input: BrowseArticleTypeInput) {
+    logger.info("BrowseArticleTypeTool.execute called with: "+ JSON.stringify(input));
     const { APIHOST, APIKEY, APIUSER } = process.env;
 
     if (!APIHOST || !APIKEY || !APIUSER) {
+      logger.error("Missing required environment variables: "+ JSON.stringify({ APIHOST, APIKEY, APIUSER }));
       return {
         content: [
           {
@@ -96,6 +98,7 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
       });
 
       if (!response.data?.results?.length) {
+        logger.error("No articles found for context and article type: "+ JSON.stringify(input)); 
         return {
           content: [
             {
@@ -108,9 +111,10 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
 
       const contentItems = response.data.results.map((result) => ({
         type: "text",
-        text: `Title: ${result.title || "N/A"}\nDOI: ${result.doi || "N/A"}\nJournal: ${result.journal || "N/A"}\nPublication Date: ${result.pubdate || "N/A"}\n`,
+        text: `Title: ${result.title || "N/A"}\nDOI: ${result.doi || "N/A"}\nPublication Date: ${result.pubdate || "N/A"}\n`,
       }));
 
+      logger.info("Articles fetched:"+ response.data.results.length);
       return { content: contentItems };
     } catch (err) {
       let errorMsg = "Failed to fetch articles. Check server logs.";
@@ -127,7 +131,7 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
       } else if (err instanceof Error) {
         errorMsg = err.message;
       }
-
+      logger.error("Error during BrowseArticleTypeTool execution: "+ errorMsg);
       // Return the error via MCP content
       return {
         content: [

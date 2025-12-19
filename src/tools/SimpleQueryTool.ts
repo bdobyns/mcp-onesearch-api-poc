@@ -1,4 +1,4 @@
-import { MCPTool } from "mcp-framework";
+import { MCPTool, logger } from "mcp-framework";
 import { z } from "zod";
 import axios, { AxiosError, AxiosResponse } from "axios";
 import { QueryApiResponse } from "../util/onesearchresponse";
@@ -26,11 +26,11 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
   schema = SimpleQuerySchema;
 
   async execute(input: SimpleQueryInput) {
-    console.log("SimpleQueryTool.execute called with:", input);
+    logger.info("SimpleQueryTool.execute called with:" + JSON.stringify(input));
 
     const { APIHOST, APIKEY, APIUSER } = process.env;
     if (!APIHOST || !APIKEY || !APIUSER) {
-      console.error("Missing required environment variables:", { APIHOST, APIKEY, APIUSER });
+      logger.error("Missing required environment variables: "+ JSON.stringify({ APIHOST, APIKEY, APIUSER }));
       return {
         content: [
           {
@@ -74,13 +74,13 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
           });
         });
 
-      console.log("results fetched:", results.length);
+      logger.info("results fetched: " + results.length);
 
-      // console.log("Returning MCP content:", JSON.stringify({ content }));
+      // logger.info("Returning MCP content:", JSON.stringify({ content }));
 
       return { content };
     } catch (err) {
-      console.error("Error during SimpleQueryTool execution:", err);
+      logger.error("Error during SimpleQueryTool execution: "+JSON.stringify(err));
       let errorMsg = "Failed to fetch articles. Check server logs.";
       if (axios.isAxiosError(err)) {
         const axiosErr = err as AxiosError;
@@ -94,10 +94,9 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
       } else if (err instanceof Error) {
         errorMsg = err.message;
       }
-
+      logger.error("Error message to return to MCP client: "+ errorMsg); 
       // Return the error via MCP content
       return {
-        console.error("Error message to return to MCP client:", errorMsg);
         content: [
           {
             type: "text",
