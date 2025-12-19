@@ -20,7 +20,7 @@ type SimpleQueryInput = {
 };
 
 class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
-  name = "SimpleQuery";";
+  name = "SimpleQuery";
   description =
     "Perform a simple query against a single journal and return matching articles. Articles must match all the keywords in the query.";
   schema = SimpleQuerySchema;
@@ -70,7 +70,7 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
         .forEach(r => {
           content.push({
             type: "text",
-            text: `Title: ${r.title}\nDOI: ${r.doi.startsWith("doi:") ? r.doi : `doi:${r.doi}`}\nJournal: ${r.journal || "N/A"}\nPublication Date: ${r.pubdate || "N/A"}\n`,
+            text: `Title: ${r.title}\nDOI: ${r.doi.startsWith("doi://") ? r.doi : `doi://${r.doi}`}\nSnippet: ${r.text || "N/A"}\nPublication Date: ${r.pubdate || "N/A"}\n`,
           });
         });
 

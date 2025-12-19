@@ -3,7 +3,7 @@ import { MCPServer } from "mcp-framework";
 import { SimpleQueryTool } from "./tools/SimpleQueryTool.js";
 import { BrowseArticleTypeTool } from "./tools/BrowseArticletypeTool.js";
 //import { SimpleQueryResource } from "./resources/SimplequeryResource.js";
-import { MorelikethisTool } from "./tools/MorelikethisTool.js";
+//import { MorelikethisTool } from "./tools/MorelikethisTool.js"; 
 
 export default {
 //  resources: [
@@ -12,7 +12,7 @@ export default {
   tools: [
     new SimpleQueryTool(),
     new BrowseArticleTypeTool(),
-    new MorelikethisTool(),
+//    new MorelikethisTool(),
   ],
 };
 
