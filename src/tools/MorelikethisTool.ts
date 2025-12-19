@@ -26,9 +26,12 @@ class MorelikethisTool extends MCPTool<MoreLikeThisInput> {
   schema = MLTSchema;
 
   async execute(input: MoreLikeThisInput) {
+    console.log("MorelikethisTool.execute called with:", input);
+
     const { APIHOST, APIKEY, APIUSER } = process.env;
 
     if (!APIHOST || !APIKEY || !APIUSER) {
+      console.error("Missing required environment variables:", { APIHOST, APIKEY, APIUSER });
       return {
         content: [
           {
@@ -58,6 +61,7 @@ class MorelikethisTool extends MCPTool<MoreLikeThisInput> {
       });
 
       if (!response.data?.results?.length) {
+        console.error("No similar articles found for DOI:", input.doi);
         return {
           content: [
             {
@@ -73,6 +77,7 @@ class MorelikethisTool extends MCPTool<MoreLikeThisInput> {
         text: `Title: ${result.title || "N/A"}\nDOI: ${result.doi || "N/A"}\nJournal: ${result.journal || "N/A"}\nPublication Date: ${result.pubdate || "N/A"}\n`,
       }));
 
+      console.log("Found similar articles:", contentItems.length);
       return { content: contentItems };
     } catch (err) {
       let errorMsg = "Failed to fetch similar articles. Check server logs.";
