@@ -20,9 +20,9 @@ type SimpleQueryInput = {
 };
 
 class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
-  name = "simple-query";
+  name = "SimpleQuery";";
   description =
-    "Perform a simple query against a single journal and return matching articles.";
+    "Perform a simple query against a single journal and return matching articles. Articles must match all the keywords in the query.";
   schema = SimpleQuerySchema;
 
   async execute(input: SimpleQueryInput) {

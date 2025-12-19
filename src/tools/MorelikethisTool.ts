@@ -21,7 +21,7 @@ interface MoreLikeThisInput {
 
 class MorelikethisTool extends MCPTool<MoreLikeThisInput> {
   name = "MoreLikeThis";
-  description = "Given a DOI, return more similar articles";
+  description = "Given a DOI, return more similar articles, based on semantic 'aboutness' terms";
 
   schema = MLTSchema;
 

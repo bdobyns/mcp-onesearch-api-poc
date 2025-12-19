@@ -10,7 +10,7 @@ interface BrowseArticleTypeInput {
 
 class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
   name = "BrowseArticleType";
-  description = "Browse articles of a specific type in a journal";
+  description = "Browse articles of a specific article type in a specific journal";
 
   schema = {
     context: {
