@@ -1,6 +1,6 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosResponse } from "axios";
 import { QueryApiResponse } from "../util/onesearchresponse";
 
 interface BrowseArticleTypeInput {
@@ -81,6 +81,7 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
       context: input.context,
       articleType: input.articleType,
       sortBy: "pubdate-descending",
+      objectType: `${input.context}-article`,
     };
 
     try {
@@ -105,20 +106,34 @@ class BrowseArticleTypeTool extends MCPTool<BrowseArticleTypeInput> {
         };
       }
 
-      // Return one text item per article
       const contentItems = response.data.results.map((result) => ({
         type: "text",
         text: `Title: ${result.title || "N/A"}\nDOI: ${result.doi || "N/A"}\nJournal: ${result.journal || "N/A"}\nPublication Date: ${result.pubdate || "N/A"}\n`,
       }));
 
       return { content: contentItems };
-    } catch (error) {
-      console.error("Error executing BrowseArticleTypeTool:", error);
+    } catch (err) {
+      let errorMsg = "Failed to fetch articles. Check server logs.";
+      if (axios.isAxiosError(err)) {
+        const axiosErr = err as AxiosError;
+        // Use the status code and response body if available
+        if (axiosErr.response) {
+          errorMsg = `API error ${axiosErr.response.status}: ${JSON.stringify(
+            axiosErr.response.data
+          )}`;
+        } else {
+          errorMsg = `Axios error: ${axiosErr.message}`;
+        }
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
+
+      // Return the error via MCP content
       return {
         content: [
           {
             type: "text",
-            text: "Failed to fetch articles. Check server logs for details.",
+            text: errorMsg,
           },
         ],
       };

@@ -1,6 +1,6 @@
 import { MCPTool } from "mcp-framework";
 import { z } from "zod";
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosResponse } from "axios";
 import { QueryApiResponse } from "../util/onesearchresponse";
 
 const SimpleQuerySchema = {
@@ -40,7 +40,12 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
     let response: AxiosResponse<QueryApiResponse>;
     try {
       response = await axios.get(url, {
-        params: { context: input.context, query: input.query },
+        params: { 
+          context: input.context, 
+          query: input.query, 
+          objectType: `${input.context}-article`,
+          showResults: 'full',
+       },
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
@@ -49,16 +54,20 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
         },
       });
     } catch (err) {
-      console.error("Error fetching from API:", err);
-      return {
-        content: [
-          {
-            type: "text" as const,
-            text: `Failed to fetch results: ${err}`,
-          },
-        ],
-      };
-    }
+      let errorMsg = "Failed to fetch articles. Check server logs.";
+      if (axios.isAxiosError(err)) {
+        const axiosErr = err as AxiosError;
+        // Use the status code and response body if available
+        if (axiosErr.response) {
+          errorMsg = `API error ${axiosErr.response.status}: ${JSON.stringify(
+            axiosErr.response.data
+          )}`;
+        } else {
+          errorMsg = `Axios error: ${axiosErr.message}`;
+        }
+      } else if (err instanceof Error) {
+        errorMsg = err.message;
+      }
 
     const results = response.data.results ?? [];
 
