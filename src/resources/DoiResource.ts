@@ -21,7 +21,10 @@ export class DoiResource extends MCPResource {
     if (!doi) {
       throw new Error("Missing DOI in resource URI");
     }
-
+    if (doi == '{doi}') {
+      throw new Error("DOI parameter not provided in resource URI");
+    } 
+    
     logger.debug(`Fetching DOI ${doi}`);
 
     const doc = await fetchByDoi(doi);
