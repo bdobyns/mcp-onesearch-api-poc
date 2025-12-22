@@ -14,7 +14,7 @@ const rl = readline.createInterface({
 rl.prompt();
 
 rl.on('line', async (line) => {
-  const doiInput = line.trim();
+  let doiInput = line.trim();
   if (!doiInput) {
     rl.prompt();
     return;
@@ -24,7 +24,7 @@ rl.on('line', async (line) => {
   doiInput = doiInput.replace(/^"+|"+$/g, '');
   // Remove leading 'doi://'
   doiInput = doiInput.replace(/^doi:\/\//i, '');
-  
+
   try {
     // Resolve the URI by replacing the {doi} template
     resource.uri = `doi://${doiInput}`;
