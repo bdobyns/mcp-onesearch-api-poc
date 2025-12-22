@@ -1,7 +1,8 @@
+// simplequerytool.ts
 import { MCPTool, logger } from "mcp-framework";
 import { z } from "zod";
-import axios, { AxiosError, AxiosResponse } from "axios";
-import { QueryApiResponse } from "../util/onesearchresponse";
+import { fetchSimpleQuery } from "../api/simplequery.js";
+import { QueryApiResponse } from "../api/onesearchresponse.js";
 
 const SimpleQuerySchema = {
   context: {
@@ -28,43 +29,12 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
   async execute(input: SimpleQueryInput) {
     logger.info("SimpleQueryTool.execute called with:" + JSON.stringify(input));
 
-    const { APIHOST, APIKEY, APIUSER } = process.env;
-    if (!APIHOST || !APIKEY || !APIUSER) {
-      logger.error("Missing required environment variables: "+ JSON.stringify({ APIHOST, APIKEY, APIUSER }));
-      return {
-        content: [
-          {
-            type: "text",
-            text: "Missing required environment variables: APIHOST, APIKEY, APIUSER",
-          },
-        ],
-      };
-    }
-
-    const url = `https://${APIHOST}/api/v1/simple`;
-
     try {
-      const response: AxiosResponse<QueryApiResponse> = await axios.get(url, {
-        params: { 
-          context: input.context, 
-          query: input.query, 
-          objectType: `${input.context}-article`,
-          showResults: 'full',
-        },
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-          apikey: APIKEY,
-          apiuser: APIUSER,
-        },
-      });
+      const results = await fetchSimpleQuery({ context: input.context, query: input.query });
 
-      const results = response.data.results ?? [];
-
-      // MCP-compliant content array (text only)
+      // MCP-compliant content array
       const content: Array<{ type: string; text: string }> = [];
 
-      // One text item per article
       results
         .filter(r => r.title && r.doi)
         .forEach(r => {
@@ -76,26 +46,11 @@ class SimpleQueryTool extends MCPTool<SimpleQueryInput> {
 
       logger.info("results fetched: " + results.length);
 
-      // logger.info("Returning MCP content:", JSON.stringify({ content }));
-
       return { content };
     } catch (err) {
-      logger.error("Error during SimpleQueryTool execution: "+JSON.stringify(err));
-      let errorMsg = "Failed to fetch articles. Check server logs.";
-      if (axios.isAxiosError(err)) {
-        const axiosErr = err as AxiosError;
-        if (axiosErr.response) {
-          errorMsg = `API error ${axiosErr.response.status}: ${JSON.stringify(
-            axiosErr.response.data
-          )}`;
-        } else {
-          errorMsg = `Axios error: ${axiosErr.message}`;
-        }
-      } else if (err instanceof Error) {
-        errorMsg = err.message;
-      }
-      logger.error("Error message to return to MCP client: "+ errorMsg); 
-      // Return the error via MCP content
+      const errorMsg = err instanceof Error ? err.message : "Failed to fetch articles. Check server logs.";
+      logger.error("SimpleQueryTool error: " + errorMsg);
+
       return {
         content: [
           {

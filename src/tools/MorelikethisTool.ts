@@ -1,7 +1,7 @@
 import { MCPTool, logger } from "mcp-framework";
 import { z } from "zod";
 import axios, { AxiosError, AxiosResponse } from "axios";
-import { QueryApiResponse } from "../util/onesearchresponse";
+import { QueryApiResponse } from "../api/onesearchresponse";
 
 const MLTSchema = {   
   context: {
