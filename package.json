@@ -1,29 +1,28 @@
 {
   "name": "mcp-onesearch-api-poc",
   "version": "0.1.0",
-  "description": "mcp-onesearch-api-poc MCP server",
+  "description": "MCP server for academic research queries",
   "type": "module",
+  "main": "dist/index.js",
   "bin": {
-    "mcp-onesearch-api-poc": "./dist/index.js"
+    "research-mcp-server": "dist/index.js"
   },
-  "files": [
-    "dist"
-  ],
   "scripts": {
-    "build": "tsc && mcp-build",
-    "watch": "tsc --watch",
-    "start": "node dist/index.js"
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
     "axios": "^1.13.2",
     "mcp-framework": "^0.2.16",
-    "zod": "3.22.4"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/node": "^20.11.24",
-    "typescript": "^5.3.3"
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
   },
   "engines": {
-    "node": "18.x"
+    "node": ">=18.0.0"
   }
 }
