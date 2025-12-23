@@ -1,7 +1,6 @@
 import { MCPServer } from "mcp-framework";
 
 import { SimpleQueryTool } from "./tools/SimpleQueryTool.js";
-import { BrowseArticleTypeTool } from "./tools/BrowseArticletypeTool.js";
 import { DoiResource } from "./resources/DoiResource.js";
 
 const useStdio = process.argv.includes("--stdio");
@@ -12,7 +11,6 @@ export default {
  ],
   tools: [
     new SimpleQueryTool(),
-    new BrowseArticleTypeTool(),
   ],
 };
 
