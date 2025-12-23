@@ -11,9 +11,9 @@ const client = axios.create({
   }
 });
 
-export async function fetchByDoi(
+export async function fetchByDoi (
   doi: string
-) {
+): Promise<string> {
     logger.info("fetchByDoi called with DOI: "+ doi);
   let context = "nejm";
 
@@ -34,8 +34,8 @@ export async function fetchByDoi(
 
     const data = response.data;
 
-    return {
-      doi: data.doi,
+    return String(data.document || "") ; // return the naked JATS XML for now
+/*    doi: data.doi,
       title: data.title,
       publicationDate: data.publicationDate,
       abstract: data.displayAbstract,
@@ -45,7 +45,7 @@ export async function fetchByDoi(
       articleType: data.articleType ?? [],
       doctype: data.doctype,
       document: data.document // JATS XML
-    };
+ */   
   } catch (err: any) {
     if (axios.isAxiosError(err)) {
       const status = err.response?.status;

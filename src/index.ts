@@ -30,4 +30,10 @@ const server = new MCPServer({
     }
 });
 
+const { APIHOST, APIKEY, APIUSER } = process.env;
+if (!APIHOST || !APIKEY || !APIUSER) {
+      console.error("Missing required environment variables: "+ JSON.stringify({ APIHOST, APIKEY, APIUSER }));
+      process.exit(1);
+} 
+
 server.start();
