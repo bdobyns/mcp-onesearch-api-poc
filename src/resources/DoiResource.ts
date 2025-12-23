@@ -15,6 +15,10 @@ export class DoiResource extends MCPResource {
     // The framework guarantees the resolved URI
     const uri = this.uri;
 
+    if (!uri) {
+      throw new Error("Missing request URI");
+    }
+
     // uri will look like: doi://10.1056/NEJMoa2502866
     const doi = uri.replace(/^doi:\/\//, "");
 

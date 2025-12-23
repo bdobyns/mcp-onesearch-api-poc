@@ -1,0 +1,30 @@
+{
+  "manifest_version": "0.2",
+  "name": "mcp-onesearch-api-poc",
+  "version": "0.1.0",
+  "description": "NEJM Group onesearch-api MCP Server. searches NEJM Group journals and products. ",
+  "author": {
+    "name": "Barry A Dobyns",
+    "email": "bdobyns@mms.org",
+    "url": "https://www.nejmgroup.org"
+  },
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/dist/index.js"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "SimpleQuery",
+      "description": "Query against one journal with query composed of keywords"
+    }
+  ],
+  "tools_generated": true,
+  "license": "MIT"
+}
