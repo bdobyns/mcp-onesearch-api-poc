@@ -2,6 +2,7 @@ import { MCPServer } from "mcp-framework";
 
 import { SimpleQueryTool } from "./tools/SimpleQueryTool.js";
 import { DoiResource } from "./resources/DoiResource.js";
+import { DoiTool } from "./tools/DoiTool.js"; 
 
 const useStdio = process.argv.includes("--stdio");
 
@@ -11,6 +12,7 @@ export default {
  ],
   tools: [
     new SimpleQueryTool(),
+    new DoiTool(),    
   ],
 };
 
