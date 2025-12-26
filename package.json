@@ -5,11 +5,11 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "research-mcp-server": "dist/index.js"
+    "research-mcp-server": "dist/server-claude.js"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/server-claude.js",
     "dev": "tsc --watch"
   },
   "dependencies": {

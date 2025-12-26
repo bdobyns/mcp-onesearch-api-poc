@@ -108,21 +108,23 @@ const SimpleQuerySchema = z.object({
   }
 );
 
-// Start server with stdio transport (for Claude Desktop)
 async function main() {
   const useStdio = process.argv.includes("--stdio");
-  if (!useStdio) {
-    const port = process.env.PORT ? parseInt(process.env.PORT) : 1337;
-    await server.listenHTTP({
-      port,  
-    });
-    console.error(`Research MCP server running on http://localhost:${port}`);
-  } else {
+  
+  if (useStdio) {
+    // Claude Desktop mode
     const transport = new StdioServerTransport();
     await server.connect(transport);
+    console.error("Research MCP server running on stdio");
+  } else {
+    // HTTP mode for testing and other clients
+    const port = process.env.PORT ? parseInt(process.env.PORT) : 1337;
+    await server.listen({
+      transport: "http",
+      port
+    });
+    console.error(`Research MCP server running on http://localhost:${port}`);
   }
-  
-  console.error("Research MCP server running on stdio");
 }
 
 main().catch((error) => {
