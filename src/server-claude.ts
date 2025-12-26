@@ -27,7 +27,7 @@ const SimpleQuerySchema = z.object({
   "fetch_by_doi",
   {
     title: "Fetch Article by DOI",
-    description: "Fetch an academic article by its DOI (Digital Object Identifier). Can be used to retrieve articles from the New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, and NEJM Clinician. DOI must start with 10.1056/",
+    description: "Fetch an academic article by its DOI (Digital Object Identifier). Can be used to retrieve articles from the New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician. DOI must start with 10.1056/",
     inputSchema: DoiSchema,
     annotations: {
       readOnlyHint: true,
@@ -56,7 +56,7 @@ const SimpleQuerySchema = z.object({
   "simple_query",
   {
     title: "Query Articles",
-    description: "Query academic articles by journal context and search query. Supported contexts include New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, and NEJM Clinician.",
+    description: "Query academic articles by journal context and search query. Supported contexts include New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician.",
     inputSchema: SimpleQuerySchema,
     annotations: {
       readOnlyHint: true,

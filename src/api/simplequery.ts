@@ -26,15 +26,20 @@ export async function fetchSimpleQuery(params: SimpleQueryParams): Promise<any[]
       params.context = 'nejm';
       break;
     case 'NEJM Catalyst':
+    case 'Catalyst':
       params.context = 'catalyst';
       break;
     case 'NEJM Evidence':
+    case 'Evidence':
       params.context = 'evidence';
       break;
     case 'NEJM AI':
+    case 'AI':
       params.context = 'nejm-ai';
       break;
     case 'NEJM Clinician':
+    case 'NEJM Journal Watch':
+    case 'Journal Watch':
       params.context = 'clinician';
       break;
     case 'nejm':
