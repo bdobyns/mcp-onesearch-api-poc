@@ -33,7 +33,7 @@ const SimpleQuerySchema = z.object({
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
-      openWorldHint: true
+      openWorldHint: false // this tool provides definitive article content for a specific doi as given
     }
   },
   async (params: any) => {
