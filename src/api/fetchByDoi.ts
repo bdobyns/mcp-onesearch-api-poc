@@ -15,8 +15,15 @@ export async function fetchByDoi (
   doi: string
 ): Promise<string> {
     logger.info("fetchByDoi called with DOI: "+ doi);
-  let context = "nejm";
+  
+  // Validate environment variables exist and are not empty
+  const { APIHOST, APIKEY, APIUSER } = process.env;
+  if (!APIHOST || !APIKEY || !APIUSER) {
+    throw new Error(`Missing required environment variables: ${JSON.stringify({ APIHOST, APIKEY, APIUSER })}`);
+  }
 
+  let context = "nejm";
+  // Infer context from DOI, simple heuristic
   if (doi.includes('NEJM')) context = 'nejm';
   else if (doi.includes('CAT')) context = 'catalyst';
   else if (doi.includes('EVID')) context = 'evidence';

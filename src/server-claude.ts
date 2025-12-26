@@ -33,7 +33,7 @@ const SimpleQuerySchema = z.object({
       readOnlyHint: true,
       destructiveHint: false,
       idempotentHint: true,
-      openWorldHint: false
+      openWorldHint: true
     }
   },
   async (params: any) => {
@@ -56,7 +56,7 @@ const SimpleQuerySchema = z.object({
   "simple_query",
   {
     title: "Query Articles",
-    description: "Query academic articles by journal context and search query. Supported contexts include New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician.",
+    description: "Query academic articles by journal context and keyword query. Supported contexts include New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician.",
     inputSchema: SimpleQuerySchema,
     annotations: {
       readOnlyHint: true,
