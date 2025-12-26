@@ -104,8 +104,43 @@ const SimpleQuerySchema = z.object({
   }
 );
 
+// Store active SSE transports by session
+const sseTransports = new Map<string, SSEServerTransport>();
+
 async function main() {
   const useStdio = process.argv.includes("--stdio");
+  
+  // Handle graceful shutdown
+  let httpServer: http.Server | null = null;
+  
+  const shutdown = () => {
+    console.error('\nShutting down gracefully...');
+    
+    // Close all SSE connections
+    for (const [sessionId, transport] of sseTransports.entries()) {
+      console.error(`Closing SSE session: ${sessionId}`);
+      sseTransports.delete(sessionId);
+    }
+    
+    // Close HTTP server
+    if (httpServer) {
+      httpServer.close(() => {
+        console.error('HTTP server closed');
+        process.exit(0);
+      });
+      
+      // Force close after 2 seconds
+      setTimeout(() => {
+        console.error('Forcing shutdown...');
+        process.exit(0);
+      }, 2000);
+    } else {
+      process.exit(0);
+    }
+  };
+  
+  process.on('SIGINT', shutdown);
+  process.on('SIGTERM', shutdown);
   
   if (useStdio) {
     // Claude Desktop mode - use stdio transport
@@ -116,7 +151,7 @@ async function main() {
     // HTTP mode with both SSE (for MCP clients) and REST (for testing)
     const port = process.env.PORT ? parseInt(process.env.PORT) : 1337;
     
-    const httpServer = http.createServer(async (req, res) => {
+    httpServer = http.createServer(async (req, res) => {
       // Enable CORS
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -131,19 +166,81 @@ async function main() {
       // SSE endpoint for MCP clients
       if (req.url === '/sse' && req.method === 'GET') {
         console.error('SSE connection established');
-        const transport = new SSEServerTransport('/message', res);
+        
+        // Generate unique session ID
+        const sessionId = crypto.randomUUID();
+        const messageEndpoint = `/sse/${sessionId}/message`;
+        
+        console.error(`Creating SSE transport with session: ${sessionId}`);
+        console.error(`Message endpoint: ${messageEndpoint}`);
+        
+        // Create transport and store it
+        const transport = new SSEServerTransport(messageEndpoint, res);
+        sseTransports.set(sessionId, transport);
+        
+        // Clean up on connection close
+        res.on('close', () => {
+          console.error(`SSE connection closed for session: ${sessionId}`);
+          sseTransports.delete(sessionId);
+        });
+        
+        // Connect server to transport
         await server.connect(transport);
       } 
-      // Message endpoint for SSE
-      else if (req.url === '/message' && req.method === 'POST') {
+      // Handle session-based message endpoints from SSE
+      else if (req.url?.match(/^\/sse\/[^/]+\/message$/) && req.method === 'POST') {
+        const sessionId = req.url.split('/')[2];
+        console.error(`Received POST for session: ${sessionId}`);
+        
+        const transport = sseTransports.get(sessionId);
+        if (!transport) {
+          console.error(`No transport found for session: ${sessionId}`);
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Session not found' }));
+          return;
+        }
+        
+        // Read the request body and let the transport handle it
         let body = '';
         req.on('data', chunk => body += chunk);
-        req.on('end', () => {
-          res.writeHead(200);
-          res.end();
+        req.on('end', async () => {
+          try {
+            console.error(`Message body: ${body}`);
+            // The SSE transport handles the message internally
+            // Just acknowledge receipt
+            res.writeHead(202, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ received: true }));
+          } catch (error: any) {
+            console.error('Error handling message:', error);
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: error.message }));
+          }
         });
-      } 
-      // REST endpoint for testing tools
+      }
+      // REST endpoint for testing tools - GET to list tools
+      else if (req.url === '/mcp' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          tools: [
+            {
+              name: 'fetch_by_doi',
+              description: 'Fetch an academic article by its DOI',
+              parameters: {
+                doi: 'string - DOI of the article (e.g., 10.1056/CLINjwNA59525)'
+              }
+            },
+            {
+              name: 'simple_query',
+              description: 'Query academic articles by journal context and search query',
+              parameters: {
+                context: 'string - Journal or context to query',
+                query: 'string - Search query string'
+              }
+            }
+          ]
+        }));
+      }
+      // REST endpoint for testing tools - POST to call a tool
       else if (req.url === '/mcp' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => body += chunk);
@@ -191,29 +288,6 @@ async function main() {
           }
         });
       }
-      // List available tools
-      else if (req.url === '/mcp' && req.method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          tools: [
-            {
-              name: 'fetch_by_doi',
-              description: 'Fetch an academic article by its DOI',
-              parameters: {
-                doi: 'string - DOI of the article (e.g., 10.1056/CLINjwNA59525)'
-              }
-            },
-            {
-              name: 'simple_query',
-              description: 'Query academic articles by journal context and search query',
-              parameters: {
-                context: 'string - Journal or context to query',
-                query: 'string - Search query string'
-              }
-            }
-          ]
-        }));
-      }
       // Health check endpoint
       else if (req.url === '/' || req.url === '/health') {
         res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -222,8 +296,7 @@ async function main() {
           version: "1.0.0",
           status: "running",
           endpoints: {
-            sse: "/sse (for MCP clients)",
-            message: "/message (for MCP clients)",
+            sse: "/sse (for MCP clients like MCP Inspector)",
             mcp_rest: "/mcp (GET - list tools, POST - call tool for testing)"
           },
           examples: {
@@ -243,12 +316,18 @@ async function main() {
       console.error(`\nResearch MCP server running on http://localhost:${port}`);
       console.error(`\nEndpoints:`);
       console.error(`  Health check: http://localhost:${port}/health`);
+      console.error(`  SSE (MCP Inspector): http://localhost:${port}/sse`);
       console.error(`  MCP REST API: http://localhost:${port}/mcp`);
       console.error(`\nTest with curl:`);
       console.error(`  curl http://localhost:${port}/mcp`);
-      console.error(`  curl -X POST http://localhost:${port}/mcp -H "Content-Type: application/json" -d '{"tool":"fetch_by_doi","arguments":{"doi":"10.1056/CLINjwNA59525"}}'`);
+      console.error(`  curl -X POST http://localhost:1337/mcp -H "Content-Type: application/json" -d '{"tool":"fetch_by_doi","arguments":{"doi":"10.1056/CLINjwNA59525"}}'`);
+      console.error(`\nPress Ctrl+C to stop`);
       console.error(``);
     });
+    
+    // Set keepalive timeout to allow graceful shutdown
+    httpServer.keepAliveTimeout = 1000;
+    httpServer.headersTimeout = 2000;
   }
 }
 
