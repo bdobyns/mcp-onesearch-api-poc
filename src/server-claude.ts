@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 import { fetchByDoi } from "./api/fetchByDoi.js";
 import { fetchSimpleQuery } from "./api/simplequery.js";
@@ -22,7 +22,7 @@ const SimpleQuerySchema = z.object({
   query: z.string().describe("Search query string")
 });
 
-// Register DoiTool using registerTool
+// Register tools
 (server as any).registerTool(
   "fetch_by_doi",
   {
@@ -41,28 +41,17 @@ const SimpleQuerySchema = z.object({
     try {
       const article = await fetchByDoi(doi);
       return {
-        content: [
-          {
-            type: "text",
-            text: article
-          }
-        ]
+        content: [{ type: "text", text: article }]
       };
     } catch (error: any) {
       return {
-        content: [
-          {
-            type: "text",
-            text: `Error fetching article: ${error.message}`
-          }
-        ],
+        content: [{ type: "text", text: `Error fetching article: ${error.message}` }],
         isError: true
       };
     }
   }
 );
 
-// Register SimpleQuery
 (server as any).registerTool(
   "simple_query",
   {
@@ -81,77 +70,36 @@ const SimpleQuerySchema = z.object({
     const query = params.query as string;
     try {
       const results = await fetchSimpleQuery({ context, query });
-      
       return {
-        content: [
-          {
-            type: "text",
-            text: JSON.stringify(results, null, 2)
-          }
-        ]
+        content: [{ type: "text", text: JSON.stringify(results, null, 2) }]
       };
     } catch (error: any) {
       return {
-        content: [
-          {
-            type: "text",
-            text: `Error querying articles: ${error.message}`
-          }
-        ],
+        content: [{ type: "text", text: `Error querying articles: ${error.message}` }],
         isError: true
       };
     }
   }
 );
 
-// Store active SSE transports by session
-const sseTransports = new Map<string, SSEServerTransport>();
-
 async function main() {
   const useStdio = process.argv.includes("--stdio");
   
-  // Handle graceful shutdown
-  let httpServer: http.Server | null = null;
-  
-  const shutdown = () => {
-    console.error('\nShutting down gracefully...');
-    
-    // Close all SSE connections
-    for (const [sessionId, transport] of sseTransports.entries()) {
-      console.error(`Closing SSE session: ${sessionId}`);
-      sseTransports.delete(sessionId);
-    }
-    
-    // Close HTTP server
-    if (httpServer) {
-      httpServer.close(() => {
-        console.error('HTTP server closed');
-        process.exit(0);
-      });
-      
-      // Force close after 2 seconds
-      setTimeout(() => {
-        console.error('Forcing shutdown...');
-        process.exit(0);
-      }, 2000);
-    } else {
-      process.exit(0);
-    }
-  };
-  
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
-  
   if (useStdio) {
-    // Claude Desktop mode - use stdio transport
+    // stdio mode for Claude Desktop
     const transport = new StdioServerTransport();
     await server.connect(transport);
     console.error("Research MCP server running on stdio");
+    process.stdin.resume();
   } else {
-    // HTTP mode with both SSE (for MCP clients) and REST (for testing)
+    // StreamableHTTP mode for MCP Inspector
     const port = process.env.PORT ? parseInt(process.env.PORT) : 1337;
     
-    httpServer = http.createServer(async (req, res) => {
+    // Create the transport once
+    const transport = new StreamableHTTPServerTransport();
+    await server.connect(transport);
+    
+    const httpServer = http.createServer(async (req, res) => {
       // Enable CORS
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -163,175 +111,48 @@ async function main() {
         return;
       }
       
-      // SSE endpoint for MCP clients
-      if (req.url === '/sse' && req.method === 'GET') {
-        console.error('SSE connection established');
-        
-        // Generate unique session ID
-        const sessionId = crypto.randomUUID();
-        const messageEndpoint = `/sse/${sessionId}/message`;
-        
-        console.error(`Creating SSE transport with session: ${sessionId}`);
-        console.error(`Message endpoint: ${messageEndpoint}`);
-        
-        // Create transport and store it
-        const transport = new SSEServerTransport(messageEndpoint, res);
-        sseTransports.set(sessionId, transport);
-        
-        // Clean up on connection close
-        res.on('close', () => {
-          console.error(`SSE connection closed for session: ${sessionId}`);
-          sseTransports.delete(sessionId);
-        });
-        
-        // Connect server to transport
-        await server.connect(transport);
-      } 
-      // Handle session-based message endpoints from SSE
-      else if (req.url?.match(/^\/sse\/[^/]+\/message$/) && req.method === 'POST') {
-        const sessionId = req.url.split('/')[2];
-        console.error(`Received POST for session: ${sessionId}`);
-        
-        const transport = sseTransports.get(sessionId);
-        if (!transport) {
-          console.error(`No transport found for session: ${sessionId}`);
-          res.writeHead(404, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Session not found' }));
-          return;
+      try {
+        // Let the transport handle the request
+        console.error(`${req.method} ${req.url}`);
+        await (transport as any).handleRequest(req, res);
+      } catch (error: any) {
+        console.error('StreamableHTTP error:', error);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: error.message }));
         }
-        
-        // Read the request body and let the transport handle it
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', async () => {
-          try {
-            console.error(`Message body: ${body}`);
-            // The SSE transport handles the message internally
-            // Just acknowledge receipt
-            res.writeHead(202, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ received: true }));
-          } catch (error: any) {
-            console.error('Error handling message:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ error: error.message }));
-          }
-        });
-      }
-      // REST endpoint for testing tools - GET to list tools
-      else if (req.url === '/mcp' && req.method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          tools: [
-            {
-              name: 'fetch_by_doi',
-              description: 'Fetch an academic article by its DOI',
-              parameters: {
-                doi: 'string - DOI of the article (e.g., 10.1056/CLINjwNA59525)'
-              }
-            },
-            {
-              name: 'simple_query',
-              description: 'Query academic articles by journal context and search query',
-              parameters: {
-                context: 'string - Journal or context to query',
-                query: 'string - Search query string'
-              }
-            }
-          ]
-        }));
-      }
-      // REST endpoint for testing tools - POST to call a tool
-      else if (req.url === '/mcp' && req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => body += chunk);
-        req.on('end', async () => {
-          try {
-            const request = JSON.parse(body);
-            const { tool, arguments: args } = request;
-            
-            console.error(`REST API call: ${tool}`, args);
-            
-            if (tool === 'fetch_by_doi') {
-              const article = await fetchByDoi(args.doi);
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ 
-                success: true, 
-                tool: 'fetch_by_doi',
-                result: article 
-              }));
-            } else if (tool === 'simple_query') {
-              const results = await fetchSimpleQuery({ 
-                context: args.context, 
-                query: args.query 
-              });
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ 
-                success: true, 
-                tool: 'simple_query',
-                result: results 
-              }));
-            } else {
-              res.writeHead(404, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ 
-                success: false,
-                error: `Tool not found: ${tool}. Available tools: fetch_by_doi, simple_query` 
-              }));
-            }
-          } catch (error: any) {
-            console.error('REST API error:', error);
-            res.writeHead(500, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ 
-              success: false,
-              error: error.message,
-              stack: error.stack 
-            }));
-          }
-        });
-      }
-      // Health check endpoint
-      else if (req.url === '/' || req.url === '/health') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({
-          name: "research-mcp-server",
-          version: "1.0.0",
-          status: "running",
-          endpoints: {
-            sse: "/sse (for MCP clients like MCP Inspector)",
-            mcp_rest: "/mcp (GET - list tools, POST - call tool for testing)"
-          },
-          examples: {
-            list_tools: "curl http://localhost:1337/mcp",
-            call_doi_tool: 'curl -X POST http://localhost:1337/mcp -H "Content-Type: application/json" -d \'{"tool":"fetch_by_doi","arguments":{"doi":"10.1056/CLINjwNA59525"}}\'',
-            call_query_tool: 'curl -X POST http://localhost:1337/mcp -H "Content-Type: application/json" -d \'{"tool":"simple_query","arguments":{"context":"NEJM","query":"diabetes"}}\''
-          }
-        }));
-      } 
-      else {
-        res.writeHead(404);
-        res.end('Not Found');
       }
     });
+    
+    // Graceful shutdown
+    const shutdown = () => {
+      console.error('\nShutting down gracefully...');
+      httpServer.close(() => {
+        console.error('HTTP server closed');
+        process.exit(0);
+      });
+      setTimeout(() => {
+        console.error('Forcing shutdown...');
+        process.exit(0);
+      }, 2000);
+    };
+    
+    process.on('SIGINT', shutdown);
+    process.on('SIGTERM', shutdown);
     
     httpServer.listen(port, () => {
       console.error(`\nResearch MCP server running on http://localhost:${port}`);
-      console.error(`\nEndpoints:`);
-      console.error(`  Health check: http://localhost:${port}/health`);
-      console.error(`  SSE (MCP Inspector): http://localhost:${port}/sse`);
-      console.error(`  MCP REST API: http://localhost:${port}/mcp`);
-      console.error(`\nTest with curl:`);
-      console.error(`  curl http://localhost:${port}/mcp`);
-      console.error(`  curl -X POST http://localhost:1337/mcp -H "Content-Type: application/json" -d '{"tool":"fetch_by_doi","arguments":{"doi":"10.1056/CLINjwNA59525"}}'`);
-      console.error(`\nPress Ctrl+C to stop`);
-      console.error(``);
+      console.error(`Transport: StreamableHTTP`);
+      console.error(`\nFor MCP Inspector, connect to: http://localhost:${port}`);
+      console.error(`Press Ctrl+C to stop\n`);
     });
     
-    // Set keepalive timeout to allow graceful shutdown
-    httpServer.keepAliveTimeout = 1000;
-    httpServer.headersTimeout = 2000;
+    httpServer.keepAliveTimeout = 60000;
+    httpServer.headersTimeout = 65000;
   }
 }
 
 main().catch((error) => {
-  console.error("Server error:", error);
+  console.error("Fatal server error:", error);
   process.exit(1);
 });
