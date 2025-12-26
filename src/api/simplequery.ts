@@ -22,6 +22,7 @@ export async function fetchSimpleQuery(params: SimpleQueryParams): Promise<any[]
   switch(params.context) {
     case 'New England Journal of Medicine':
     case 'The New England Journal of Medicine':
+    case 'NEJM'
       params.context = 'nejm';
       break;
     case 'NEJM Catalyst':
@@ -36,7 +37,7 @@ export async function fetchSimpleQuery(params: SimpleQueryParams): Promise<any[]
     case 'NEJM Clinician':
       params.context = 'clinician';
       break;
-   case 'nejm':
+    case 'nejm':
     case 'catalyst':
     case 'evidence':
     case 'clinician':
