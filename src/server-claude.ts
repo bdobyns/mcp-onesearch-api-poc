@@ -1,86 +1,28 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { z } from "zod";
-import { fetchByDoi } from "./api/fetchByDoi.js";
-import { fetchSimpleQuery } from "./api/simplequery.js";
 import http from "http";
+import { tools } from "./tools/index.js";
 
 // Create MCP server instance
 const server = new McpServer({
-  name: "research-mcp-server",
-  version: "1.0.0"
+  name: "mcp-onesearch-api-poc-server",
+  version: "0.1.0"
 });
 
-// Define schemas
-const DoiSchema = z.object({
-  doi: z.string().describe("DOI of the article to fetch")
+// Register all tools
+tools.forEach(tool => {
+  (server as any).registerTool(
+    tool.name,
+    {
+      title: tool.title,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      annotations: tool.annotations
+    },
+    tool.handler
+  );
 });
-
-const SimpleQuerySchema = z.object({
-  context: z.string().describe("Journal or context to query"),
-  query: z.string().describe("Search query string")
-});
-
-// Register tools
-(server as any).registerTool(
-  "fetch_by_doi",
-  {
-    title: "Fetch Article by DOI",
-    description: "Fetch an academic article by its DOI (Digital Object Identifier). Can be used to retrieve articles from the New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician. DOI must start with 10.1056/",
-    inputSchema: DoiSchema,
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: false // this tool provides definitive article content for a specific doi as given
-    }
-  },
-  async (params: any) => {
-    const doi = params.doi as string;
-    try {
-      const article = await fetchByDoi(doi);
-      return {
-        content: [{ type: "text", text: article }]
-      };
-    } catch (error: any) {
-      return {
-        content: [{ type: "text", text: `Error fetching article: ${error.message}` }],
-        isError: true
-      };
-    }
-  }
-);
-
-(server as any).registerTool(
-  "simple_query",
-  {
-    title: "Query Articles",
-    description: "Query academic articles by journal context and keyword query. Supported contexts include New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician.",
-    inputSchema: SimpleQuerySchema,
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      idempotentHint: true,
-      openWorldHint: true
-    }
-  },
-  async (params: any) => {
-    const context = params.context as string;
-    const query = params.query as string;
-    try {
-      const results = await fetchSimpleQuery({ context, query });
-      return {
-        content: [{ type: "text", text: JSON.stringify(results, null, 2) }]
-      };
-    } catch (error: any) {
-      return {
-        content: [{ type: "text", text: `Error querying articles: ${error.message}` }],
-        isError: true
-      };
-    }
-  }
-);
 
 async function main() {
   const useStdio = process.argv.includes("--stdio");
@@ -89,7 +31,7 @@ async function main() {
     // stdio mode for Claude Desktop
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("Research MCP server running on stdio");
+    console.error("onesearch-api MCP server running on stdio");
     process.stdin.resume();
   } else {
     // StreamableHTTP mode for MCP Inspector
@@ -141,9 +83,9 @@ async function main() {
     process.on('SIGTERM', shutdown);
     
     httpServer.listen(port, () => {
-      console.error(`\nResearch MCP server running on http://localhost:${port}`);
+      console.error(`\onesearch-api MCP server running on http://localhost:${port}`);
       console.error(`Transport: StreamableHTTP`);
-      console.error(`\nFor MCP Inspector, connect to: http://localhost:${port}`);
+      console.error(`\nFor MCP Inspector, connect to: http://localhost:${port}/mcp`);
       console.error(`Press Ctrl+C to stop\n`);
     });
     
