@@ -110,8 +110,17 @@ const SimpleQuerySchema = z.object({
 
 // Start server with stdio transport (for Claude Desktop)
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  const useStdio = process.argv.includes("--stdio");
+  if (!useStdio) {
+    const port = process.env.PORT ? parseInt(process.env.PORT) : 1337;
+    await server.listenHTTP({
+      port,  
+    });
+    console.error(`Research MCP server running on http://localhost:${port}`);
+  } else {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+  }
   
   console.error("Research MCP server running on stdio");
 }
