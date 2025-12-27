@@ -3,6 +3,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
 import { tools } from "./tools/index.js";
+import { logger } from "./util/Logger.js";
 
 // Create MCP server instance
 const server = new McpServer({
@@ -31,7 +32,7 @@ async function main() {
     // stdio mode for Claude Desktop
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("onesearch-api MCP server running on stdio");
+    logger.info("onesearch-api MCP server running on stdio");
     process.stdin.resume();
   } else {
     // StreamableHTTP mode for MCP Inspector
@@ -55,10 +56,10 @@ async function main() {
       
       try {
         // Let the transport handle the request
-        console.error(`${req.method} ${req.url}`);
+        logger.info(`${req.method} ${req.url}`);
         await (transport as any).handleRequest(req, res);
       } catch (error: any) {
-        console.error('StreamableHTTP error:', error);
+        logger.error('StreamableHTTP error:'+ error);
         if (!res.headersSent) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: error.message }));
@@ -68,13 +69,13 @@ async function main() {
     
     // Graceful shutdown
     const shutdown = () => {
-      console.error('\nShutting down gracefully...');
+      logger.info('Shutting down gracefully...');
       httpServer.close(() => {
-        console.error('HTTP server closed');
+        logger.info('HTTP server closed');
         process.exit(0);
       });
       setTimeout(() => {
-        console.error('Forcing shutdown...');
+        logger.error('Forcing shutdown...');
         process.exit(0);
       }, 2000);
     };
@@ -83,10 +84,10 @@ async function main() {
     process.on('SIGTERM', shutdown);
     
     httpServer.listen(port, () => {
-      console.error(`\onesearch-api MCP server running on http://localhost:${port}`);
-      console.error(`Transport: StreamableHTTP`);
-      console.error(`\nFor MCP Inspector, connect to: http://localhost:${port}/mcp`);
-      console.error(`Press Ctrl+C to stop\n`);
+      logger.info(`onesearch-api MCP server running on http://localhost:${port}`);
+      logger.info(`Transport: StreamableHTTP`);
+      logger.info(`For MCP Inspector, connect to: http://localhost:${port}/mcp`);
+      logger.info(`Press Ctrl+C to stop\n`);
     });
     
     httpServer.keepAliveTimeout = 60000;
@@ -95,6 +96,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Fatal server error:", error);
+  logger.error("Fatal server error:"+ error);
   process.exit(1);
 });
