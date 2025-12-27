@@ -2,6 +2,7 @@
 import axios, { AxiosResponse, AxiosError } from "axios";
 import { QueryApiResponse } from "./onesearchresponse.js";
 import { logger } from "../util/Logger.js";
+import { validateAndNormalizeContext } from "../util/contextUtils.js";
 
 export type SimpleQueryParams = {
   context: string;
@@ -19,46 +20,15 @@ export async function fetchSimpleQuery(params: SimpleQueryParams): Promise<any[]
  
   const url = `https://${APIHOST}/api/v1/simple`;
 
-  switch(params.context) {
-    case 'New England Journal of Medicine':
-    case 'The New England Journal of Medicine':
-    case 'NEJM':
-      params.context = 'nejm';
-      break;
-    case 'NEJM Catalyst':
-    case 'Catalyst':
-      params.context = 'catalyst';
-      break;
-    case 'NEJM Evidence':
-    case 'Evidence':
-      params.context = 'evidence';
-      break;
-    case 'NEJM AI':
-    case 'AI':
-      params.context = 'nejm-ai';
-      break;
-    case 'NEJM Clinician':
-    case 'Clinician':
-    case 'NEJM Journal Watch':
-    case 'Journal Watch':
-      params.context = 'clinician';
-      break;
-    case 'nejm':
-    case 'catalyst':
-    case 'evidence':
-    case 'clinician':
-    case 'nejm-ai':
-      break;
-    default:
-      throw new Error(`Invalid context: ${params.context}`);
-  }
+  // Validate and normalize context
+  const { normalizedContext, objectType } = validateAndNormalizeContext(params.context);
 
   try {
     const response: AxiosResponse<QueryApiResponse> = await axios.get(url, {
       params: { 
-        context: params.context, 
+        context: normalizedContext, 
         query: params.query,
-        objectType: `${params.context}-article`,
+        objectType: objectType,
         showResults: 'full',
       },
       headers: {

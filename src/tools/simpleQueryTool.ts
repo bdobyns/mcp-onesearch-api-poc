@@ -10,7 +10,7 @@ const SimpleQuerySchema = z.object({
 export const simpleQueryTool: ToolDefinition = {
   name: "simple_query",
   title: "Query Articles",
-  description: "Query academic articles by journal context and keyword query. Supported contexts include New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician.",
+  description: "Query NEJM Group articles by journal context and keyword query. Supported contexts include New England Journal of Medicine, NEJM Catalyst, NEJM Evidence, NEJM AI, NEJM Journal Watch, and NEJM Clinician. You can also specify 'All' for querying all the journals at once.",
   inputSchema: SimpleQuerySchema,
   annotations: {
     readOnlyHint: true,
