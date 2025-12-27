@@ -1,3 +1,5 @@
+// brazenly stolen from https://github.com/QuantGeekDev/mcp-framework/blob/main/src/core/Logger.ts
+// so that we don't have to import the whole mcp-framework just for logging
 import { createWriteStream, WriteStream } from "fs";
 import { join } from "path";
 import { mkdir } from "fs/promises";

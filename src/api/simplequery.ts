@@ -1,7 +1,7 @@
 // ../api/simplequery.ts
 import axios, { AxiosResponse, AxiosError } from "axios";
 import { QueryApiResponse } from "./onesearchresponse.js";
-import { logger } from "mcp-framework";
+import { logger } from "../util/Logger.js";
 
 export type SimpleQueryParams = {
   context: string;

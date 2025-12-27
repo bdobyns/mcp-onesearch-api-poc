@@ -1,5 +1,5 @@
 import axios from "axios";
-import { logger} from "mcp-framework";
+import { logger} from "../util/Logger.js";
 
 const client = axios.create({
   baseURL: "https://"+process.env.APIHOST+"/api/v1",

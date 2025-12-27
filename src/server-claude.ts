@@ -55,9 +55,49 @@ async function main() {
       }
       
       try {
-        // Let the transport handle the request
-        logger.info(`${req.method} ${req.url}`);
-        await (transport as any).handleRequest(req, res);
+        // Enhanced logging based on request method
+        if (req.method === 'GET') {
+          const fullUrl = `http://${req.headers.host}${req.url}`;
+          logger.info(`GET ${fullUrl}`);
+          await (transport as any).handleRequest(req, res);
+        } else if (req.method === 'POST') {
+          // Buffer the body
+          const chunks: Buffer[] = [];
+          req.on('data', (chunk) => chunks.push(chunk));
+          
+          await new Promise<void>((resolve) => {
+            req.on('end', () => {
+              const body = Buffer.concat(chunks).toString();
+              logger.info(`POST ${req.url} - Body: ${body}`);
+              resolve();
+            });
+          });
+          
+          // Create a new IncomingMessage-like object with the buffered body
+          const { Readable } = await import('stream');
+          const bodyStream = new Readable({
+            read() {
+              this.push(Buffer.concat(chunks));
+              this.push(null);
+            }
+          });
+          
+          // Copy all critical properties
+          (bodyStream as any).method = req.method;
+          (bodyStream as any).url = req.url;
+          (bodyStream as any).headers = req.headers;
+          (bodyStream as any).httpVersion = req.httpVersion;
+          (bodyStream as any).httpVersionMajor = req.httpVersionMajor;
+          (bodyStream as any).httpVersionMinor = req.httpVersionMinor;
+          (bodyStream as any).rawHeaders = req.rawHeaders;
+          (bodyStream as any).socket = req.socket;
+          
+          await (transport as any).handleRequest(bodyStream, res);
+        } else {
+          logger.info(`${req.method} ${req.url}`);
+          await (transport as any).handleRequest(req, res);
+        }
+      
       } catch (error: any) {
         logger.error('StreamableHTTP error:'+ error);
         if (!res.headersSent) {
