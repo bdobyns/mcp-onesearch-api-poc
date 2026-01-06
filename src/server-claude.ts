@@ -2,6 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import http from "http";
+import { config } from "./config/env.js";
 import { tools } from "./tools/index.js";
 import { logger } from "./util/Logger.js";
 
@@ -36,7 +37,7 @@ async function main() {
     process.stdin.resume();
   } else {
     // StreamableHTTP mode for MCP Inspector
-    const port = process.env.PORT ? parseInt(process.env.PORT) : 1337;
+    const port = config.server.port;
     
     // Create the transport once
     const transport = new StreamableHTTPServerTransport();

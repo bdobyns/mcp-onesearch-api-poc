@@ -1,30 +1,11 @@
 import axios from "axios";
+import { apiClient } from "./client.js";
 import { logger } from "../util/Logger.js";
-
-const client = axios.create({
-  baseURL: "https://" + process.env.APIHOST + "/api/v1",
-  timeout: 10_000,
-  headers: {
-    Accept: "application/json",
-    apikey: process.env.APIKEY,
-    apiuser: process.env.APIUSER,
-  }
-});
 
 export async function fetchByDoi (
   doi: string
 ): Promise<string> {
-    logger.info("fetchByDoi called with DOI: " + doi);
-  
-  // Validate environment variables exist and are not empty
-  const { APIHOST, APIKEY, APIUSER } = process.env;
-  const missingVars = [];
-  if (!APIHOST) missingVars.push('APIHOST');
-  if (!APIKEY) missingVars.push('APIKEY');
-  if (!APIUSER) missingVars.push('APIUSER');
-  if (missingVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-  }
+  logger.info("fetchByDoi called with DOI: " + doi);
 
   let context = "nejm";
   // Infer context from DOI, simple heuristic
@@ -35,7 +16,7 @@ export async function fetchByDoi (
   else context = 'clinician'; // catchall for everything else
 
   try {
-    const response = await client.get("/content", {
+    const response = await apiClient.get("/content", {
       params: {
         doi: doi,
         context,

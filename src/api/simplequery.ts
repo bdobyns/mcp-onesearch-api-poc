@@ -1,5 +1,6 @@
 // ../api/simplequery.ts
 import axios, { AxiosResponse, AxiosError } from "axios";
+import { apiClient } from "./client.js";
 import { QueryApiResponse } from "./onesearchresponse.js";
 import { logger } from "../util/Logger.js";
 import { validateAndNormalizeContext } from "../util/contextUtils.js";
@@ -10,36 +11,18 @@ export type SimpleQueryParams = {
 };
 
 export async function fetchSimpleQuery(params: SimpleQueryParams): Promise<any[]> {
-  const { APIHOST, APIKEY, APIUSER } = process.env;
-
-  const missingVars = [];
-  if (!APIHOST) missingVars.push('APIHOST');
-  if (!APIKEY) missingVars.push('APIKEY');
-  if (!APIUSER) missingVars.push('APIUSER');
-  if (missingVars.length > 0) {
-    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
-  }
-
   logger.info(`fetchSimpleQuery called with context: ${params.context}, query: ${params.query}`);
- 
-  const url = `https://${APIHOST}/api/v1/simple`;
 
   // Validate and normalize context
   const { normalizedContext, objectType } = validateAndNormalizeContext(params.context);
 
   try {
-    const response: AxiosResponse<QueryApiResponse> = await axios.get(url, {
-      params: { 
-        context: normalizedContext, 
+    const response: AxiosResponse<QueryApiResponse> = await apiClient.get('/simple', {
+      params: {
+        context: normalizedContext,
         query: params.query,
         objectType: objectType,
         showResults: 'full',
-      },
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        apikey: APIKEY,
-        apiuser: APIUSER,
       },
     });
 

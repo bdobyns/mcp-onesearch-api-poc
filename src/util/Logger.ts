@@ -3,6 +3,7 @@
 import { createWriteStream, WriteStream } from "fs";
 import { join } from "path";
 import { mkdir } from "fs/promises";
+import { config } from "../config/env.js";
 
 export class Logger {
   private static instance: Logger;
@@ -11,11 +12,11 @@ export class Logger {
   private logToFile: boolean = false;
 
   private constructor() {
-    this.logToFile = process.env.MCP_ENABLE_FILE_LOGGING === 'true';
-    
+    this.logToFile = config.logging.enableFileLogging;
+
     if (this.logToFile) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-      const logDir = process.env.MCP_LOG_DIRECTORY || "logs";
+      const logDir = config.logging.logDirectory;
 
       this.initFileLogging(logDir, timestamp);
     }
@@ -85,7 +86,7 @@ export class Logger {
     if (this.logToFile && this.logStream) {
       this.logStream.write(formattedMessage);
     }
-    if (process.env.MCP_DEBUG_CONSOLE === 'true') {
+    if (config.logging.debugConsole) {
       process.stderr.write(formattedMessage);
     }
   }
