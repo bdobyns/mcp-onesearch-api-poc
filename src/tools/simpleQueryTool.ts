@@ -24,7 +24,10 @@ export const simpleQueryTool: ToolDefinition = {
     try {
       const results = await fetchSimpleQuery({ context, query });
       return {
-        content: [{ type: "text", text: JSON.stringify(results, null, 2) }]
+        content: results.map(article => ({
+          type: "text",
+          text: JSON.stringify(article, null, 2)
+        }))
       };
     } catch (error: any) {
       return {
