@@ -5,8 +5,12 @@ import { logger } from "../util/Logger.js";
 export async function fetchMoreLikeThis(doi: string): Promise<any[]> {
   const { APIHOST, APIKEY, APIUSER } = process.env;
 
-  if (!APIHOST || !APIKEY || !APIUSER) {
-    throw new Error(`Missing required environment variables: ${JSON.stringify({ APIHOST, APIKEY, APIUSER })}`);
+  const missingVars = [];
+  if (!APIHOST) missingVars.push('APIHOST');
+  if (!APIKEY) missingVars.push('APIKEY');
+  if (!APIUSER) missingVars.push('APIUSER');
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
 
   logger.info(`fetchMoreLikeThis called with DOI: ${doi}`);

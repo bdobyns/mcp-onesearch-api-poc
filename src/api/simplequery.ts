@@ -12,8 +12,12 @@ export type SimpleQueryParams = {
 export async function fetchSimpleQuery(params: SimpleQueryParams): Promise<any[]> {
   const { APIHOST, APIKEY, APIUSER } = process.env;
 
-  if (!APIHOST || !APIKEY || !APIUSER) {
-    throw new Error(`Missing required environment variables: ${JSON.stringify({ APIHOST, APIKEY, APIUSER })}`);
+  const missingVars = [];
+  if (!APIHOST) missingVars.push('APIHOST');
+  if (!APIKEY) missingVars.push('APIKEY');
+  if (!APIUSER) missingVars.push('APIUSER');
+  if (missingVars.length > 0) {
+    throw new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
   }
 
   logger.info(`fetchSimpleQuery called with context: ${params.context}, query: ${params.query}`);
