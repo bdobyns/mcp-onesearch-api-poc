@@ -1,8 +1,8 @@
 import axios from "axios";
-import { logger} from "../util/Logger.js";
+import { logger } from "../util/Logger.js";
 
 const client = axios.create({
-  baseURL: "https://"+process.env.APIHOST+"/api/v1",
+  baseURL: "https://" + process.env.APIHOST + "/api/v1",
   timeout: 10_000,
   headers: {
     Accept: "application/json",
@@ -14,7 +14,7 @@ const client = axios.create({
 export async function fetchByDoi (
   doi: string
 ): Promise<string> {
-    logger.info("fetchByDoi called with DOI: "+ doi);
+    logger.info("fetchByDoi called with DOI: " + doi);
   
   // Validate environment variables exist and are not empty
   const { APIHOST, APIKEY, APIUSER } = process.env;
@@ -41,7 +41,7 @@ export async function fetchByDoi (
 
     const data = response.data;
 
-    return String(data.document || "") ; // return the naked JATS XML for now
+    return String(data.document || ""); // return the naked JATS XML for now
 /*    doi: data.doi,
       title: data.title,
       publicationDate: data.publicationDate,

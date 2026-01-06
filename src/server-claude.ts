@@ -99,7 +99,7 @@ async function main() {
         }
       
       } catch (error: any) {
-        logger.error('StreamableHTTP error:'+ error);
+        logger.error('StreamableHTTP error: ' + error);
         if (!res.headersSent) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: error.message }));
@@ -136,6 +136,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  logger.error("Fatal server error:"+ error);
+  logger.error("Fatal server error: " + error);
   process.exit(1);
 });
